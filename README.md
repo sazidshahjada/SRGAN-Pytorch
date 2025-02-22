@@ -16,7 +16,7 @@ This repository implements a Super-Resolution Generative Adversarial Network (SR
 
 ## Requirements
 
-- Python 3.x
+- Python 3.12.6
 - [PyTorch](https://pytorch.org/get-started/previous-versions/)
 - Additional dependencies listed in [requirements.txt](requirements.txt)
 
