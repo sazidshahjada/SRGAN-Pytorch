@@ -1,0 +1,108 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Virtual environments
+env/
+venv/
+ENV/
+.venv/
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# VSCode settings
+.vscode/
+
+# Image file formats
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.ico   
+
+# Audio file formats
+*.mp3
+*.flac
+*.wav
+*.ogg
+*.aiff
+*.au    
+
+# Video file formats
+*.mp4
+*.mov
+*.avi
+*.wmv
+*.mkv       
+
+# Document file formats
+*.pdf
+*.doc
+*.docx
+*.xls
+*.xlsx
+*.ppt
+*.pptx
+*.odt
+*.ods
+*.odp
+*.rtf
+*.csv   
+
+# Archive file formats
+*.zip
+*.tar
+*.gz
+*.bz2
+*.7z
+*.rar
+*.bak   
+
+# Pretrained models
+*.pth
+*.pt
+
+# Logs and checkpoints
+*.log
+*.ckpt
+*.ckpt-*
+*.index
+*.data-00000-of-00001
+*.meta
+*.pb
+*.pbtxt
+*.h5
+*.hdf5
+*.npy
+*.npz
+*.pkl
+*.joblib
+*.pickle
+*.csv
+*.tsv
+*.json
+*.yaml
+*.yml
+*.xml
+*.html
+
