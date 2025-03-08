@@ -3,9 +3,9 @@ import random
 import shutil
 from tqdm import tqdm
 
-source_dir = "/home/iot/SRGAN_implementation/data/High_Res_Images"
-destination_dir = "/home/iot/SRGAN_implementation/samples/high_res_image"
-num_samples = 1000
+source_dir = "./data/High_Res_Images"
+destination_dir = "./samples/high_res_image"
+num_samples = 100
 
 os.makedirs(destination_dir, exist_ok=True)
 

@@ -2,10 +2,8 @@ import torch
 from torchvision import transforms
 from PIL import Image
 from gan_models import Generator
+from parameters import DEVICE, LR_IMAGE_SIZE
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-LR_IMAGE_SIZE = (64, 64)
-# HR_IMAGE_SIZE is defined by your generator output (e.g. 256 x 256)
 
 def load_generator(model_path):
     generator = Generator().to(DEVICE)
@@ -38,14 +36,14 @@ def super_resolve(generator, lr_image_path, output_path):
 if __name__ == "__main__":
     import os
 
-    checkpoint_dir = "/home/iot/SRGAN_implementation/checkpoints"
-    model_file = "srgan_epoch_9.pth"
-    lr_image_dir = "/home/iot/SRGAN_implementation/test_images"
-    lr_image_file = "monalisa.jpeg"
+    checkpoint_dir = "./checkpoints"
+    model_file = "srgan_epoch_1000.pth"
+    lr_image_dir = "./test_images"
+    lr_image_file = "monalisa_16x16.jpeg"
     lr_image = os.path.join(lr_image_dir, lr_image_file)
     
     model_path = os.path.join(checkpoint_dir, model_file)
-    output = f"/home/iot/SRGAN_implementation/outputs/{os.path.splitext(lr_image_file)[0]}-{os.path.splitext(model_file)[0]}.jpg"
+    output = f"./outputs/{os.path.splitext(lr_image_file)[0]}-{os.path.splitext(model_file)[0]}.jpg"
     print("Loading SRGAN generator...")
     generator = load_generator(model_path)
     print("Model loaded successfully!")

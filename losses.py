@@ -2,21 +2,21 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from gan_models import VGG19FeatureExtractor
+from parameters import DEVICE
 
-DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 class GeneratorLoss(nn.Module):
-    def __init__(self, alpha=0.0006):
+    def __init__(self, alpha=1e-3):
         super(GeneratorLoss, self).__init__()
         self.feature_extractor = VGG19FeatureExtractor().eval().to(DEVICE)
         self.mse_loss = nn.MSELoss()
-        self.bce_loss = nn.BCEWithLogitsLoss()
+        self.bce_loss = nn.BCELoss()
         self.alpha = alpha
 
     def forward(self, fake_hr, real_hr, fake_preds):
-        perceptual_loss = self.mse_loss(self.feature_extractor(fake_hr), self.feature_extractor(real_hr))
+        content_loss = self.mse_loss(self.feature_extractor(fake_hr), self.feature_extractor(real_hr))
         adversarial_loss = self.bce_loss(fake_preds, torch.ones_like(fake_preds))
-        return perceptual_loss + self.alpha * adversarial_loss
+        return content_loss * 0.006 + self.alpha * adversarial_loss
 
 class DiscriminatorLoss(nn.Module):
     def __init__(self):

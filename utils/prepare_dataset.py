@@ -2,9 +2,10 @@ import os
 from PIL import Image
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
+from parameters import HR_IMAGE_SIZE, LR_IMAGE_SIZE
 
 class PairedDataset(Dataset):
-    def __init__(self, hr_dir, hr_image_size=(256, 256), lr_image_size=(64, 64)):
+    def __init__(self, hr_dir, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE):
         self.hr_dir = hr_dir
         self.hr_transform = transforms.Compose([
             transforms.Resize(hr_image_size, interpolation=Image.BICUBIC),
