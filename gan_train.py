@@ -1,17 +1,17 @@
 import os
 import torch
-import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from torchvision import transforms
+import torchvision.utils as vutils
+from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 
 from tqdm import tqdm
+from parameters import *
 from gan_models import Generator, Discriminator
 from utils.prepare_dataset import PairedDataset
 from losses import GeneratorLoss, DiscriminatorLoss
 from utils.eval_metrics import calculate_psnr, calculate_ssim
-from parameters import *
 
 
 # Directory to save checkpoints and logs
@@ -20,31 +20,37 @@ LOG_DIR = "./runs/srgan_experiment"
 os.makedirs(CHECKPOINT_DIR, exist_ok=True)
 writer = SummaryWriter(log_dir=LOG_DIR)
 
+# Directory to save result images
+RESULTS_DIR = "./results"
+os.makedirs(RESULTS_DIR, exist_ok=True)
+
+# Initialize models, losses, and optimizers
+generator = Generator().to(DEVICE)
+discriminator = Discriminator().to(DEVICE)
+generator_loss = GeneratorLoss(alpha=ALPHA).to(DEVICE)
+discriminator_loss = DiscriminatorLoss().to(DEVICE)
+generator_optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+    
+# Learning rate schedulers
+generator_scheduler = torch.optim.lr_scheduler.StepLR(generator_optimizer, step_size=30, gamma=0.1)
+discriminator_scheduler = torch.optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=30, gamma=0.1)
+    
+# Initialize dataloader
+train_dataset = PairedDataset(hr_dir=HR_DIR, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
+train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+val_dataset = PairedDataset(hr_dir=VAL_DIR, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
+val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=True)
+
 # Define training loop for SRGAN
-def train_sr_gan(hr_dir):
-    # Initialize models, losses, and optimizers
-    generator = Generator().to(DEVICE)
-    discriminator = Discriminator().to(DEVICE)
-    generator_loss = GeneratorLoss(alpha=ALPHA).to(DEVICE)
-    discriminator_loss = DiscriminatorLoss().to(DEVICE)
-    generator_optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-    discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-    
-    # Learning rate schedulers
-    generator_scheduler = torch.optim.lr_scheduler.StepLR(generator_optimizer, step_size=30, gamma=0.1)
-    discriminator_scheduler = torch.optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=30, gamma=0.1)
-    
-    # Initialize dataloader
-    dataset = PairedDataset(hr_dir, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
-    dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True)
-    
+def train_sr_gan(hr_dir, val_dir, num_epochs=NUM_EPOCHS):
     global_step = 0
 
-    for epoch in range(NUM_EPOCHS):
+    for epoch in range(num_epochs):
         generator.train()
         discriminator.train()
         
-        for batch in tqdm(dataloader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS}"):
+        for batch in tqdm(train_dataloader, desc=f"Epoch {epoch+1}/{NUM_EPOCHS}"):
             hr_batch = batch["hr"].to(DEVICE)
             lr_batch = batch["lr"].to(DEVICE)
             
@@ -68,6 +74,7 @@ def train_sr_gan(hr_dir):
             # Log losses
             writer.add_scalar("Loss/Discriminator", d_loss.item(), global_step)
             writer.add_scalar("Loss/Generator", g_loss.item(), global_step)
+            print(f"Generator Loss: {g_loss.item():.4f}, Discriminator Loss: {d_loss.item():.4f}")
             global_step += 1
         
         # Update learning rates
@@ -75,24 +82,33 @@ def train_sr_gan(hr_dir):
         discriminator_scheduler.step()
         
         # Evaluation
-        if (epoch + 1) % 5 == 0:  # Evaluate every 5 epochs
+        if (epoch + 1) % 10 == 0:
             generator.eval()
+            epoch_results_dir = os.path.join(RESULTS_DIR, f"epoch_{epoch+1}")
+            os.makedirs(epoch_results_dir, exist_ok=True)  # Create a directory for the current epoch
+
             with torch.no_grad():
                 psnr_values = []
                 ssim_values = []
-                for batch in dataloader:
+                for batch_idx, batch in enumerate(val_dataloader):
                     hr_batch = batch["hr"].to(DEVICE)
                     lr_batch = batch["lr"].to(DEVICE)
                     fake_hr = generator(lr_batch)
                     for i in range(hr_batch.size(0)):
                         psnr_values.append(calculate_psnr(hr_batch[i], fake_hr[i]))
                         ssim_values.append(calculate_ssim(hr_batch[i], fake_hr[i]))
+                        
+                        # Save the trio of images (LR, Generated HR, Original HR)
+                        result_image = torch.cat((lr_batch[i].unsqueeze(0), fake_hr[i].unsqueeze(0), hr_batch[i].unsqueeze(0)), dim=3)  # Concatenate images horizontally
+                        image_path = os.path.join(epoch_results_dir, f"image_{batch_idx * val_dataloader.batch_size + i + 1}.png")
+                        vutils.save_image(result_image, image_path, normalize=True)
+                
                 avg_psnr = torch.tensor(psnr_values).mean().item()
                 avg_ssim = torch.tensor(ssim_values).mean().item()
             
             writer.add_scalar("Eval/PSNR", avg_psnr, epoch)
             writer.add_scalar("Eval/SSIM", avg_ssim, epoch)
-            print(f"Epoch [{epoch+1}/{NUM_EPOCHS}] - Avg. PSNR: {avg_psnr:.2f}, Avg. SSIM: {avg_ssim:.4f}")
+            print(f"\nAvg. PSNR: {avg_psnr:.2f}, Avg. SSIM: {avg_ssim:.4f}\n")
         
         # Save checkpoint
         if (epoch + 1) % 100 == 0:

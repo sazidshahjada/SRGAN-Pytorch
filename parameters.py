@@ -1,6 +1,8 @@
 import torch
 
 # Define all hyperparameters here
+HR_DIR = "./data/HR_images"
+VAL_DIR = "./data/val_images"
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 BATCH_SIZE = 16
 HR_IMAGE_SIZE = (64, 64)
