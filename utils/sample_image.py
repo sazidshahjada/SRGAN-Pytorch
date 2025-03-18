@@ -4,8 +4,8 @@ import shutil
 from tqdm import tqdm
 
 source_dir = "./data/High_Res_Images"
-destination_dir = "./samples/high_res_image"
-num_samples = 100
+destination_dir = "./val_images/HR_images"
+num_samples = 50
 
 os.makedirs(destination_dir, exist_ok=True)
 
