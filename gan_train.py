@@ -52,7 +52,7 @@ discriminator_scheduler = torch.optim.lr_scheduler.StepLR(discriminator_optimize
 train_dataset = PairedDataset(hr_dir=HR_DIR, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
 train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
 val_dataset = PairedDataset(hr_dir=VAL_DIR, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
-val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE, shuffle=True)
+val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 
 def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, hr_dir, val_dir, num_epochs=NUM_EPOCHS):
     global_step = 0
@@ -131,7 +131,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                         # Resize LR image to match HR dimensions before concatenation
                         lr_resized = F.interpolate(lr_batch[i].unsqueeze(0),
                                                    size=hr_batch[i].shape[-2:],
-                                                   mode='bilinear',
+                                                   mode='bicubic',
                                                    align_corners=False)
                         # Concatenate LR, Generated HR, and Original HR images along width (dim=3)
                         result_image = torch.cat((lr_resized, fake_hr[i].unsqueeze(0), hr_batch[i].unsqueeze(0)), dim=3)
@@ -182,6 +182,9 @@ if __name__ == "__main__":
     gen_losses, disc_losses, eval_epochs, psnr_scores, ssim_scores = train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, HR_DIR, VAL_DIR, NUM_EPOCHS)
     writer.close()
     
+    import matplotlib
+    matplotlib.use("Agg")
+
     # Create directory for graphs
     os.makedirs("graphs", exist_ok=True)
     
@@ -191,6 +194,7 @@ if __name__ == "__main__":
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.title("Generator Loss per Epoch")
+    plt.grid(True)
     plt.legend()
     plt.savefig("graphs/generator_loss.png")
     plt.close()
@@ -201,6 +205,7 @@ if __name__ == "__main__":
     plt.xlabel("Epoch")
     plt.ylabel("Loss")
     plt.title("Discriminator Loss per Epoch")
+    plt.grid(True)
     plt.legend()
     plt.savefig("graphs/discriminator_loss.png")
     plt.close()
@@ -211,6 +216,7 @@ if __name__ == "__main__":
     plt.xlabel("Epoch")
     plt.ylabel("PSNR")
     plt.title("PSNR During Evaluation")
+    plt.grid(True)
     plt.legend()
     plt.savefig("graphs/psnr.png")
     plt.close()
@@ -221,8 +227,9 @@ if __name__ == "__main__":
     plt.xlabel("Epoch")
     plt.ylabel("SSIM")
     plt.title("SSIM During Evaluation")
+    plt.grid(True)
     plt.legend()
     plt.savefig("graphs/ssim.png")
     plt.close()
     
-    print("Graphs saved in the 'graphs' folder.")
+    print("\nGraphs saved in the 'graphs' folder.\n")
