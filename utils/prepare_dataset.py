@@ -1,19 +1,22 @@
 import os
+import torch
 from PIL import Image
 import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
-from parameters import HR_IMAGE_SIZE, LR_IMAGE_SIZE
+from parameters import HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE
 
 class PairedDataset(Dataset):
     def __init__(self, hr_dir, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE):
         self.hr_dir = hr_dir
         self.hr_transform = transforms.Compose([
             transforms.Resize(hr_image_size, interpolation=Image.BICUBIC),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         self.lr_transform = transforms.Compose([
             transforms.Resize(lr_image_size, interpolation=Image.BICUBIC),
-            transforms.ToTensor()
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
         ])
         # List of high-resolution image filenames
         self.image_names = os.listdir(hr_dir)
@@ -32,6 +35,11 @@ class PairedDataset(Dataset):
         
         return {'hr': hr_img, 'lr': lr_img}
 
+def denormalize(img):
+    device = img.device
+    mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(-1, 1, 1)
+    std = torch.tensor([0.229, 0.224, 0.225], device=device).view(-1, 1, 1)
+    return (img * std + mean).clamp(0, 1)
 
 
 if __name__ == "__main__":

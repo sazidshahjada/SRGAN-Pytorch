@@ -8,13 +8,13 @@ import torchvision.utils as vutils
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
-
 from tqdm import tqdm
-from parameters import *
-from gan_models import Generator, Discriminator
-from utils.prepare_dataset import PairedDataset
-from losses import GeneratorLoss, DiscriminatorLoss
+
+from parameters import HR_DIR, VAL_DIR, HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, BETA1, BETA2, ALPHA
+from utils.prepare_dataset import PairedDataset, denormalize
 from utils.eval_metrics import calculate_psnr, calculate_ssim
+from gan_models import Generator, Discriminator
+from losses import GeneratorLoss, DiscriminatorLoss
 
 # Setup directories
 CHECKPOINT_DIR = "./checkpoints"
@@ -39,12 +39,11 @@ for entry in os.listdir(RESULTS_DIR):
 
 # Initialize models, losses, optimizers, and schedulers
 generator = Generator().to(DEVICE)
-discriminator = Discriminator().to(DEVICE)
+discriminator = Discriminator(HR_IMAGE_SIZE).to(DEVICE)
 generator_loss = GeneratorLoss(alpha=ALPHA).to(DEVICE)
 discriminator_loss = DiscriminatorLoss().to(DEVICE)
 generator_optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
 discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
-
 generator_scheduler = torch.optim.lr_scheduler.StepLR(generator_optimizer, step_size=30, gamma=0.1)
 discriminator_scheduler = torch.optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=30, gamma=0.1)
 
@@ -54,7 +53,7 @@ train_dataloader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True
 val_dataset = PairedDataset(hr_dir=VAL_DIR, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE)
 val_dataloader = DataLoader(val_dataset, batch_size=BATCH_SIZE)
 
-def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, hr_dir, val_dir, num_epochs=NUM_EPOCHS):
+def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, hr_dir, val_dir, start_epoch=0, num_epochs=NUM_EPOCHS):
     global_step = 0
     avg_gen_losses = []
     avg_disc_losses = []
@@ -62,7 +61,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
     eval_psnr_list = []
     eval_ssim_list = []
     
-    for epoch in range(num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         generator.train()
         discriminator.train()
         epoch_g_loss_sum = 0.0
@@ -104,8 +103,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
         avg_gen_losses.append(avg_gen_loss)
         avg_disc_losses.append(avg_disc_loss)
         
-        # Print average losses at the end of the epoch
-        print(f"Generator Loss: {avg_gen_loss:.4f}, Discriminator Loss: {avg_disc_loss:.4f}")
+        print(f"Epoch {epoch+1}/{num_epochs} - Generator Loss: {avg_gen_loss:.8f}, Discriminator Loss: {avg_disc_loss:.8f}")
         
         # Update learning rate schedulers
         generator_scheduler.step()
@@ -133,8 +131,10 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                                                    size=hr_batch[i].shape[-2:],
                                                    mode='bicubic',
                                                    align_corners=False)
-                        # Concatenate LR, Generated HR, and Original HR images along width (dim=3)
-                        result_image = torch.cat((lr_resized, fake_hr[i].unsqueeze(0), hr_batch[i].unsqueeze(0)), dim=3)
+                        result_image = torch.cat((denormalize(lr_resized),
+                                                  denormalize(fake_hr[i].unsqueeze(0)),
+                                                  denormalize(hr_batch[i].unsqueeze(0))),
+                                                  dim=3)
                         image_path = os.path.join(epoch_results_dir, f"image_{batch_idx * val_dataloader.batch_size + i + 1}.png")
                         vutils.save_image(result_image, image_path, normalize=True)
                 
@@ -145,7 +145,6 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                 writer.add_scalar("Eval/SSIM", avg_ssim, epoch)
                 print(f"\nEvaluation - Avg. PSNR: {avg_psnr:.2f}, Avg. SSIM: {avg_ssim:.4f}")
                 print(f"Results saved in: {epoch_results_dir}\n")
-
                 
                 eval_epochs.append(epoch+1)
                 eval_psnr_list.append(avg_psnr)
@@ -168,7 +167,10 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
 if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore")
-
+    
+    # Clean up GPU memory
+    torch.cuda.empty_cache()
+    
     print("Starting SRGAN training...")
     print(f"Training for {NUM_EPOCHS} epochs")
     print(f"High-res images: {len(os.listdir(HR_DIR))}, Size: {HR_IMAGE_SIZE}")
@@ -178,17 +180,17 @@ if __name__ == "__main__":
     print(f"Log directory: {LOG_DIR}")
     print(f"Checkpoints directory: {CHECKPOINT_DIR}")
     print()
-
-    gen_losses, disc_losses, eval_epochs, psnr_scores, ssim_scores = train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, HR_DIR, VAL_DIR, NUM_EPOCHS)
+    
+    # Set start_epoch (change if resuming training)
+    start_epoch = 0
+    gen_losses, disc_losses, eval_epochs, psnr_scores, ssim_scores = train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, HR_DIR, VAL_DIR, start_epoch, NUM_EPOCHS)
     writer.close()
     
     import matplotlib
     matplotlib.use("Agg")
-
-    # Create directory for graphs
+    
     os.makedirs("graphs", exist_ok=True)
     
-    # Save Generator Loss graph
     plt.figure()
     plt.plot(range(1, NUM_EPOCHS+1), gen_losses, label="Generator Loss")
     plt.xlabel("Epoch")
@@ -196,10 +198,9 @@ if __name__ == "__main__":
     plt.title("Generator Loss per Epoch")
     plt.grid(True)
     plt.legend()
-    plt.savefig("graphs/generator_loss.png")
+    plt.savefig(f"graphs/generator_loss_{NUM_EPOCHS}.png")
     plt.close()
     
-    # Save Discriminator Loss graph
     plt.figure()
     plt.plot(range(1, NUM_EPOCHS+1), disc_losses, label="Discriminator Loss", color="orange")
     plt.xlabel("Epoch")
@@ -207,10 +208,9 @@ if __name__ == "__main__":
     plt.title("Discriminator Loss per Epoch")
     plt.grid(True)
     plt.legend()
-    plt.savefig("graphs/discriminator_loss.png")
+    plt.savefig(f"graphs/discriminator_loss_{NUM_EPOCHS}.png")
     plt.close()
     
-    # Save PSNR graph
     plt.figure()
     plt.plot(eval_epochs, psnr_scores, marker="o", label="PSNR", color="green")
     plt.xlabel("Epoch")
@@ -218,10 +218,9 @@ if __name__ == "__main__":
     plt.title("PSNR During Evaluation")
     plt.grid(True)
     plt.legend()
-    plt.savefig("graphs/psnr.png")
+    plt.savefig(f"graphs/psnr_{NUM_EPOCHS}.png")
     plt.close()
     
-    # Save SSIM graph
     plt.figure()
     plt.plot(eval_epochs, ssim_scores, marker="o", label="SSIM", color="red")
     plt.xlabel("Epoch")
@@ -229,7 +228,8 @@ if __name__ == "__main__":
     plt.title("SSIM During Evaluation")
     plt.grid(True)
     plt.legend()
-    plt.savefig("graphs/ssim.png")
+    plt.savefig(f"graphs/ssim_{NUM_EPOCHS}.png")
     plt.close()
     
     print("\nGraphs saved in the 'graphs' folder.\n")
+    torch.cuda.empty_cache()
