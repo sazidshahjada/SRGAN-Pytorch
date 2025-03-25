@@ -35,11 +35,11 @@ class PairedDataset(Dataset):
         
         return {'hr': hr_img, 'lr': lr_img}
 
-def denormalize(img):
-    device = img.device
-    mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(-1, 1, 1)
-    std = torch.tensor([0.229, 0.224, 0.225], device=device).view(-1, 1, 1)
-    return (img * std + mean).clamp(0, 1)
+# def denormalize(img):
+#     device = DEVICE
+#     mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(-1, 1, 1)
+#     std = torch.tensor([0.229, 0.224, 0.225], device=device).view(-1, 1, 1)
+#     return (img * std + mean).clamp(0, 1)
 
 
 if __name__ == "__main__":

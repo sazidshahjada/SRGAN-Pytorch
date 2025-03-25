@@ -3,7 +3,6 @@ import shutil
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-from torchvision import transforms
 import torchvision.utils as vutils
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
@@ -11,10 +10,10 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from parameters import HR_DIR, VAL_DIR, HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, BETA1, BETA2, ALPHA
-from utils.prepare_dataset import PairedDataset, denormalize
+from utils.prepare_dataset import PairedDataset
 from utils.eval_metrics import calculate_psnr, calculate_ssim
 from gan_models import Generator, Discriminator
-from losses import GeneratorLoss, DiscriminatorLoss
+from losses import GeneratorLoss, DiscriminatorLoss, ImprovedGeneratorLoss
 
 # Setup directories
 CHECKPOINT_DIR = "./checkpoints"
@@ -40,7 +39,7 @@ for entry in os.listdir(RESULTS_DIR):
 # Initialize models, losses, optimizers, and schedulers
 generator = Generator().to(DEVICE)
 discriminator = Discriminator(HR_IMAGE_SIZE).to(DEVICE)
-generator_loss = GeneratorLoss(alpha=ALPHA).to(DEVICE)
+generator_loss = ImprovedGeneratorLoss(alpha=ALPHA).to(DEVICE)
 discriminator_loss = DiscriminatorLoss().to(DEVICE)
 generator_optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
 discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
@@ -131,9 +130,9 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                                                    size=hr_batch[i].shape[-2:],
                                                    mode='bicubic',
                                                    align_corners=False)
-                        result_image = torch.cat((denormalize(lr_resized),
-                                                  denormalize(fake_hr[i].unsqueeze(0)),
-                                                  denormalize(hr_batch[i].unsqueeze(0))),
+                        result_image = torch.cat(lr_resized,
+                                                 fake_hr[i].unsqueeze(0),
+                                                 hr_batch[i].unsqueeze(0),
                                                   dim=3)
                         image_path = os.path.join(epoch_results_dir, f"image_{batch_idx * val_dataloader.batch_size + i + 1}.png")
                         vutils.save_image(result_image, image_path, normalize=True)

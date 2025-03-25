@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 from parameters import HR_DIR, VAL_DIR, HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, BETA1, BETA2, ALPHA
-from utils.prepare_dataset import PairedDataset, denormalize
+from utils.prepare_dataset import PairedDataset
 from utils.eval_metrics import calculate_psnr, calculate_ssim
 from gan_models import Generator, Discriminator
 from losses import GeneratorLoss, DiscriminatorLoss
