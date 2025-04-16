@@ -39,10 +39,10 @@ class PairedDataset(Dataset):
         
         return {'hr': hr_img, 'lr': lr_img}
 
-def denormalize(tensor):
+def denormalize(tensor, mean=MEAN, std=STD):
     # Convert MEAN and STD to torch tensors and reshape for broadcasting
-    mean = torch.tensor(MEAN).view(-1, 1, 1).to(tensor.device)
-    std = torch.tensor(STD).view(-1, 1, 1).to(tensor.device)
+    mean = torch.tensor(mean).view(-1, 1, 1).to(tensor.device)
+    std = torch.tensor(std).view(-1, 1, 1).to(tensor.device)
     # Revert normalization
     tensor_denorm = tensor * std + mean
     return tensor_denorm.clamp(0, 1)
