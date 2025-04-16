@@ -10,10 +10,12 @@ import matplotlib.pyplot as plt
 from tqdm import tqdm
 
 from parameters import HR_DIR, VAL_DIR, HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, BETA1, BETA2, ALPHA
-from utils.prepare_dataset import PairedDataset
+from utils.prepare_dataset import  MEAN, STD
+from utils.prepare_dataset import PairedDataset, denormalize
 from utils.eval_metrics import calculate_psnr, calculate_ssim
 from gan_models import Generator, Discriminator
-from losses import GeneratorLoss, DiscriminatorLoss, ImprovedGeneratorLoss
+from losses import GeneratorLoss, DiscriminatorLoss
+
 
 # Setup directories
 CHECKPOINT_DIR = "./checkpoints"
@@ -39,10 +41,12 @@ for entry in os.listdir(RESULTS_DIR):
 # Initialize models, losses, optimizers, and schedulers
 generator = Generator().to(DEVICE)
 discriminator = Discriminator(HR_IMAGE_SIZE).to(DEVICE)
-generator_loss = ImprovedGeneratorLoss(alpha=ALPHA).to(DEVICE)
+generator_loss = GeneratorLoss(alpha=ALPHA).to(DEVICE)
 discriminator_loss = DiscriminatorLoss().to(DEVICE)
+
 generator_optimizer = optim.Adam(generator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
 discriminator_optimizer = optim.Adam(discriminator.parameters(), lr=LEARNING_RATE, betas=(BETA1, BETA2))
+
 generator_scheduler = torch.optim.lr_scheduler.StepLR(generator_optimizer, step_size=30, gamma=0.1)
 discriminator_scheduler = torch.optim.lr_scheduler.StepLR(discriminator_optimizer, step_size=30, gamma=0.1)
 
@@ -74,7 +78,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
             # Train discriminator
             discriminator_optimizer.zero_grad()
             fake_hr = generator(lr_batch)
-            real_preds = discriminator(hr_batch)
+            real_preds = discriminator(hr_batch)  # Shape: (batch_size, 1, 16, 16)
             fake_preds = discriminator(fake_hr.detach())
             d_loss = discriminator_loss(real_preds, fake_preds)
             d_loss.backward()
@@ -88,7 +92,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
             g_loss.backward()
             generator_optimizer.step()
             
-            # Log losses to TensorBoard and accumulate for plotting
+            # Log losses and accumulate numbers
             writer.add_scalar("Loss/Discriminator", d_loss.item(), global_step)
             writer.add_scalar("Loss/Generator", g_loss.item(), global_step)
             epoch_g_loss_sum += g_loss.item()
@@ -96,20 +100,20 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
             num_batches += 1
             global_step += 1
         
-        # Compute average losses for the epoch
+        # Average losses for the epoch
         avg_gen_loss = epoch_g_loss_sum / num_batches
         avg_disc_loss = epoch_d_loss_sum / num_batches
         avg_gen_losses.append(avg_gen_loss)
         avg_disc_losses.append(avg_disc_loss)
         
-        print(f"Epoch {epoch+1}/{num_epochs} - Generator Loss: {avg_gen_loss:.8f}, Discriminator Loss: {avg_disc_loss:.8f}")
+        print(f" - Generator Loss: {avg_gen_loss:.8f}, Discriminator Loss: {avg_disc_loss:.8f}")
         
-        # Update learning rate schedulers
+        # Update schedulers
         generator_scheduler.step()
         discriminator_scheduler.step()
         
-        # Run evaluation every 10 epochs
-        if (epoch + 1) % 10 == 0:
+        # Evaluation every 5 epochs
+        if (epoch + 1) % 5 == 0:
             generator.eval()
             epoch_results_dir = os.path.join(RESULTS_DIR, f"epoch_{epoch+1}")
             os.makedirs(epoch_results_dir, exist_ok=True)
@@ -130,12 +134,13 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                                                    size=hr_batch[i].shape[-2:],
                                                    mode='bicubic',
                                                    align_corners=False)
-                        result_image = torch.cat(lr_resized,
-                                                 fake_hr[i].unsqueeze(0),
-                                                 hr_batch[i].unsqueeze(0),
+                        # Concatenate denormalized images along width (dim=3)
+                        result_image = torch.cat((denormalize(lr_resized, MEAN, STD),
+                                                  denormalize(fake_hr[i].unsqueeze(0), MEAN, STD),
+                                                  denormalize(hr_batch[i].unsqueeze(0), MEAN, STD)),
                                                   dim=3)
                         image_path = os.path.join(epoch_results_dir, f"image_{batch_idx * val_dataloader.batch_size + i + 1}.png")
-                        vutils.save_image(result_image, image_path, normalize=True)
+                        vutils.save_image(result_image, image_path)
                 
                 avg_psnr = torch.tensor(psnr_values).mean().item()
                 avg_ssim = torch.tensor(ssim_values).mean().item()
@@ -149,7 +154,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                 eval_psnr_list.append(avg_psnr)
                 eval_ssim_list.append(avg_ssim)
         
-        # Save model checkpoint every 50 epochs
+        # Save checkpoint every 50 epochs
         if (epoch + 1) % 50 == 0:
             checkpoint_path = os.path.join(CHECKPOINT_DIR, f"srgan_epoch_{epoch+1}.pth")
             torch.save({
@@ -167,7 +172,7 @@ if __name__ == "__main__":
     import warnings
     warnings.filterwarnings("ignore")
     
-    # Clean up GPU memory
+    # Clean GPU memory
     torch.cuda.empty_cache()
     
     print("Starting SRGAN training...")

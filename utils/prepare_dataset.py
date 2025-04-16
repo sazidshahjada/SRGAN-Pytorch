@@ -5,18 +5,22 @@ import torchvision.transforms as transforms
 from torch.utils.data import Dataset, DataLoader
 from parameters import HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE
 
+
+MEAN = [0.41766175627708435, 0.4126753509044647, 0.39600545167922974]
+STD =  [0.2138405591249466, 0.1984556019306183, 0.2018120288848877]
+
 class PairedDataset(Dataset):
     def __init__(self, hr_dir, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE):
         self.hr_dir = hr_dir
         self.hr_transform = transforms.Compose([
             transforms.Resize(hr_image_size, interpolation=Image.BICUBIC),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=MEAN, std=STD)
         ])
         self.lr_transform = transforms.Compose([
             transforms.Resize(lr_image_size, interpolation=Image.BICUBIC),
             transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
+            transforms.Normalize(mean=MEAN, std=STD)
         ])
         # List of high-resolution image filenames
         self.image_names = os.listdir(hr_dir)
@@ -35,11 +39,13 @@ class PairedDataset(Dataset):
         
         return {'hr': hr_img, 'lr': lr_img}
 
-# def denormalize(img):
-#     device = DEVICE
-#     mean = torch.tensor([0.485, 0.456, 0.406], device=device).view(-1, 1, 1)
-#     std = torch.tensor([0.229, 0.224, 0.225], device=device).view(-1, 1, 1)
-#     return (img * std + mean).clamp(0, 1)
+def denormalize(tensor):
+    # Convert MEAN and STD to torch tensors and reshape for broadcasting
+    mean = torch.tensor(MEAN).view(-1, 1, 1).to(tensor.device)
+    std = torch.tensor(STD).view(-1, 1, 1).to(tensor.device)
+    # Revert normalization
+    tensor_denorm = tensor * std + mean
+    return tensor_denorm.clamp(0, 1)
 
 
 if __name__ == "__main__":

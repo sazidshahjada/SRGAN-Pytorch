@@ -60,7 +60,7 @@ class Generator(nn.Module):
             _UpsampleBlock(64, 256, 3, 1, 1),
             _UpsampleBlock(64, 256, 3, 1, 1),
         )
-        self.conv3 = nn.Conv2d(64, 3, 9, 1, 4)
+        self.conv3 = nn.Sequential(nn.Conv2d(64, 3, 9, 1, 4), nn.Tanh())  # Add Tanh
 
     def forward(self, x):
         x = self.prelu(self.conv1(x))
@@ -79,9 +79,7 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.input_shape = input_shape
         in_height, in_width = input_shape
-        final_height = in_height // 16
-        final_width = in_width // 16
-
+        # Four stride-2 convolutions reduce 256x256 to 16x16
         self.conv_blocks = nn.Sequential(
             nn.Conv2d(3, 64, kernel_size=3, stride=1, padding=1),
             nn.LeakyReLU(0.2, inplace=True),
@@ -91,22 +89,12 @@ class Discriminator(nn.Module):
             _ConvBlock(128, 256, kernel_size=3, stride=1, padding=1),
             _ConvBlock(256, 256, kernel_size=3, stride=2, padding=1),
             _ConvBlock(256, 512, kernel_size=3, stride=1, padding=1),
-            _ConvBlock(512, 512, kernel_size=3, stride=2, padding=1)
-        )
-
-        self.fc_input_size = 512 * final_height * final_width
-        self.fc = nn.Sequential(
-            nn.Linear(self.fc_input_size, 1024),
-            nn.LeakyReLU(0.2, inplace=True),
-            nn.Linear(1024, 1),
-            nn.Sigmoid()
+            _ConvBlock(512, 512, kernel_size=3, stride=2, padding=1),
+            nn.Conv2d(512, 1, kernel_size=3, stride=1, padding=1)  # Output: (batch_size, 1, 16, 16)
         )
 
     def forward(self, x):
-        x = self.conv_blocks(x)
-        x = torch.flatten(x, start_dim=1)
-        x = self.fc(x)
-        return x
+        return self.conv_blocks(x)
 
 
 
@@ -114,7 +102,7 @@ class VGG19FeatureExtractor(nn.Module):
     def __init__(self):
         super(VGG19FeatureExtractor, self).__init__()
         vgg19 = models.vgg19(pretrained=True).features
-        self.feature_extractor = nn.Sequential(*list(vgg19.children())[:36])
+        self.feature_extractor = nn.Sequential(*list(vgg19.children())[:18])  # Change to 18
 
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
