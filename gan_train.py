@@ -11,7 +11,7 @@ from tqdm import tqdm
 
 from parameters import HR_DIR, VAL_DIR, HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE, NUM_EPOCHS, BATCH_SIZE, LEARNING_RATE, BETA1, BETA2, ALPHA
 from utils.prepare_dataset import  MEAN, STD
-from utils.prepare_dataset import PairedDataset, denormalize
+from utils.prepare_dataset import PairedDataset, denormalize, denormalize_gen
 from utils.eval_metrics import calculate_psnr, calculate_ssim
 from gan_models import Generator, Discriminator
 from losses import GeneratorLoss, DiscriminatorLoss
@@ -136,7 +136,7 @@ def train_sr_gan(generator, discriminator, generator_loss, discriminator_loss, h
                                                    align_corners=False)
                         # Concatenate denormalized images along width (dim=3)
                         result_image = torch.cat((denormalize(lr_resized, MEAN, STD),
-                                                  denormalize(fake_hr[i].unsqueeze(0), MEAN, STD),
+                                                  denormalize_gen(fake_hr[i].unsqueeze(0), MEAN, STD),
                                                   denormalize(hr_batch[i].unsqueeze(0), MEAN, STD)),
                                                   dim=3)
                         image_path = os.path.join(epoch_results_dir, f"image_{batch_idx * val_dataloader.batch_size + i + 1}.png")

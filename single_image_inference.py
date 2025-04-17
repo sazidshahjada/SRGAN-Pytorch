@@ -3,6 +3,7 @@ from torchvision import transforms
 from PIL import Image
 from gan_models import Generator
 from parameters import DEVICE, LR_IMAGE_SIZE
+from utils.prepare_dataset import denormalize, MEAN, STD
 
 
 def load_generator(model_path):
@@ -18,13 +19,14 @@ def super_resolve(generator, lr_image_path, output_path):
     lr_image = Image.open(lr_image_path).convert("RGB")
     transform_lr = transforms.Compose([
         transforms.Resize(LR_IMAGE_SIZE, interpolation=Image.BICUBIC),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        transforms.Normalize(mean=MEAN, std=STD)
     ])
     lr_tensor = transform_lr(lr_image).unsqueeze(0).to(DEVICE)
     
     # Generate HR image
     with torch.no_grad():
-        fake_hr_tensor = generator(lr_tensor)
+        fake_hr_tensor = denormalize(generator(lr_tensor))
     
     # Post process: remove batch dim, clamp and convert to PIL Image
     fake_hr_tensor = fake_hr_tensor.squeeze(0).cpu().clamp(0, 1)
@@ -37,9 +39,9 @@ if __name__ == "__main__":
     import os
 
     checkpoint_dir = "./checkpoints"
-    model_file = "srgan_epoch_1000.pth"
+    model_file = "srgan_epoch_100.pth"
     lr_image_dir = "./test_images"
-    lr_image_file = "monalisa_16x16.jpeg"
+    lr_image_file = "white_64x64.jpg"
     lr_image = os.path.join(lr_image_dir, lr_image_file)
     
     model_path = os.path.join(checkpoint_dir, model_file)

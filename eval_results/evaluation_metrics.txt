@@ -1,0 +1,57 @@
+Evaluation Results for Generator: ./checkpoints/srgan_epoch_100.pth
+Validation Dataset: ./val_images/HR_images
+Total Images: 50
+
+Image 1: PSNR = 4.78, SSIM = 0.5826
+Image 2: PSNR = -2.24, SSIM = 0.3085
+Image 3: PSNR = -2.56, SSIM = 0.3204
+Image 4: PSNR = -0.66, SSIM = 0.7049
+Image 5: PSNR = 0.45, SSIM = 0.4438
+Image 6: PSNR = 2.26, SSIM = 0.7002
+Image 7: PSNR = 2.20, SSIM = 0.4745
+Image 8: PSNR = 0.64, SSIM = 0.4916
+Image 9: PSNR = 3.88, SSIM = 0.5045
+Image 10: PSNR = 0.39, SSIM = 0.5013
+Image 11: PSNR = 3.19, SSIM = 0.5055
+Image 12: PSNR = -2.41, SSIM = 0.4487
+Image 13: PSNR = 3.96, SSIM = 0.4617
+Image 14: PSNR = 1.69, SSIM = 0.6597
+Image 15: PSNR = 5.38, SSIM = 0.5787
+Image 16: PSNR = 2.54, SSIM = 0.3692
+Image 17: PSNR = -0.34, SSIM = 0.6112
+Image 18: PSNR = 4.01, SSIM = 0.6547
+Image 19: PSNR = -0.88, SSIM = 0.4694
+Image 20: PSNR = 0.78, SSIM = 0.5677
+Image 21: PSNR = 5.23, SSIM = 0.3677
+Image 22: PSNR = 0.70, SSIM = 0.3101
+Image 23: PSNR = -1.29, SSIM = 0.4907
+Image 24: PSNR = 1.94, SSIM = 0.0628
+Image 25: PSNR = 4.60, SSIM = 0.3778
+Image 26: PSNR = -1.67, SSIM = 0.3391
+Image 27: PSNR = -0.26, SSIM = 0.4963
+Image 28: PSNR = 4.97, SSIM = 0.3672
+Image 29: PSNR = 2.34, SSIM = 0.3061
+Image 30: PSNR = 1.34, SSIM = 0.4127
+Image 31: PSNR = 0.19, SSIM = 0.5121
+Image 32: PSNR = 1.18, SSIM = 0.5942
+Image 33: PSNR = 2.33, SSIM = 0.5962
+Image 34: PSNR = -0.40, SSIM = 0.4011
+Image 35: PSNR = 2.09, SSIM = 0.4524
+Image 36: PSNR = -4.38, SSIM = 0.3610
+Image 37: PSNR = 0.57, SSIM = 0.6488
+Image 38: PSNR = 0.60, SSIM = 0.4017
+Image 39: PSNR = 2.21, SSIM = 0.2571
+Image 40: PSNR = -0.36, SSIM = 0.6153
+Image 41: PSNR = -0.36, SSIM = 0.5817
+Image 42: PSNR = -0.33, SSIM = 0.5719
+Image 43: PSNR = -0.18, SSIM = 0.4114
+Image 44: PSNR = 3.08, SSIM = 0.6572
+Image 45: PSNR = 1.95, SSIM = 0.3260
+Image 46: PSNR = 0.79, SSIM = 0.4968
+Image 47: PSNR = 2.70, SSIM = 0.4425
+Image 48: PSNR = 2.74, SSIM = 0.4710
+Image 49: PSNR = 2.36, SSIM = 0.4948
+Image 50: PSNR = 4.39, SSIM = 0.4959
+
+Average PSNR: 1.32
+Average SSIM: 0.4736

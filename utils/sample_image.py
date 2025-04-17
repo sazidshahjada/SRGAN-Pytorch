@@ -3,9 +3,9 @@ import random
 import shutil
 from tqdm import tqdm
 
-source_dir = "./data/High_Res_Images"
-destination_dir = "./val_images/HR_images"
-num_samples = 50
+source_dir = "./data/HR_images"
+destination_dir = "./train_samples/HR_images"
+num_samples = 5000
 
 os.makedirs(destination_dir, exist_ok=True)
 

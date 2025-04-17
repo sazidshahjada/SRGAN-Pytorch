@@ -47,6 +47,17 @@ def denormalize(tensor, mean=MEAN, std=STD):
     tensor_denorm = tensor * std + mean
     return tensor_denorm.clamp(0, 1)
 
+def denormalize_gen(img, mean=MEAN, std=STD):
+    device = DEVICE
+    mean = torch.tensor(mean, device=device).view(-1, 1, 1)
+    std = torch.tensor(std, device=device).view(-1, 1, 1)
+    img = img * std + mean  # Denormalize to [mean - std, mean + std]
+    # Scale to [0, 1] by normalizing based on the min and max of the denormalized range
+    img_min = torch.tensor([m - s for m, s in zip(mean.flatten(), std.flatten())], device=device).view(-1, 1, 1)
+    img_max = torch.tensor([m + s for m, s in zip(mean.flatten(), std.flatten())], device=device).view(-1, 1, 1)
+    img = (img - img_min) / (img_max - img_min)  # Scale to [0, 1]
+    return img.clamp(0, 1)
+
 
 if __name__ == "__main__":
     hr_dir = "/home/iot/SRGAN_implementation/data/High_Res_Images"  # Adjust to your HR images folder
