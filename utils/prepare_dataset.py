@@ -6,8 +6,8 @@ from torch.utils.data import Dataset, DataLoader
 from parameters import HR_IMAGE_SIZE, LR_IMAGE_SIZE, DEVICE
 
 
-MEAN = [0.41766175627708435, 0.4126753509044647, 0.39600545167922974]
-STD =  [0.2138405591249466, 0.1984556019306183, 0.2018120288848877]
+MEAN = [0.42608919739723206, 0.4238995611667633, 0.40830039978027344]
+STD =  [0.21209083497524261, 0.19771985709667206, 0.20165333151817322]
 
 class PairedDataset(Dataset):
     def __init__(self, hr_dir, hr_image_size=HR_IMAGE_SIZE, lr_image_size=LR_IMAGE_SIZE):
@@ -46,6 +46,7 @@ def denormalize(tensor, mean=MEAN, std=STD):
     # Revert normalization
     tensor_denorm = tensor * std + mean
     return tensor_denorm.clamp(0, 1)
+
 
 def denormalize_gen(img, mean=MEAN, std=STD):
     device = DEVICE

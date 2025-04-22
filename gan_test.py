@@ -52,8 +52,8 @@ def evaluate_generator(generator, val_dir, checkpoint_path, output_dir=EVAL_RESU
             
             # Compute metrics for each image in the batch
             for i in range(hr_batch.size(0)):
-                psnr = calculate_psnr(hr_batch[i], fake_hr[i])
-                ssim = calculate_ssim(hr_batch[i], fake_hr[i])
+                psnr = calculate_psnr(denormalize(hr_batch[i], MEAN, STD), denormalize_gen(fake_hr[i], MEAN, STD))
+                ssim = calculate_ssim(denormalize(hr_batch[i], MEAN, STD), denormalize_gen(fake_hr[i], MEAN, STD))
                 psnr_values.append(psnr.item())
                 ssim_values.append(ssim)
                 

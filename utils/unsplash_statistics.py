@@ -28,7 +28,7 @@ transform = transforms.Compose([
 
 
 if __name__ == "__main__":
-    data_path = "./train_samples/HR_images"
+    data_path = "./data/HR_images"
     dataset = UnsplashDataset(data_path, transform=transform)
     loader = DataLoader(dataset, batch_size=16, shuffle=False)
 

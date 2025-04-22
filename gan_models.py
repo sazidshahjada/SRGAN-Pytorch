@@ -102,7 +102,7 @@ class VGG19FeatureExtractor(nn.Module):
     def __init__(self):
         super(VGG19FeatureExtractor, self).__init__()
         vgg19 = models.vgg19(pretrained=True).features
-        self.feature_extractor = nn.Sequential(*list(vgg19.children())[:18])  # Change to 18
+        self.feature_extractor = nn.Sequential(*list(vgg19.children())[:18])  # Change to layer 18
 
         for param in self.feature_extractor.parameters():
             param.requires_grad = False
